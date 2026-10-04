@@ -232,6 +232,26 @@ section_probes() {
         echo "  Top probing IPs:"
         top_n "$probes" 1 "$TOPN" | print_counts | sed 's/^/  /'
     fi
+
+    # The one line that matters: a probe that got a 2xx means the thing
+    # being probed for actually exists and was served.  Should always be none.
+    echo "  !! Probes that SUCCEEDED (2xx):"
+    awk -F'\t' '$5 ~ /^2/' "$probes" > "$WORKDIR/probes-ok.tsv"
+    top_n "$WORKDIR/probes-ok.tsv" 4 "$TOPN" | print_counts | sed 's/^/  /'
+}
+
+# Login attempts: many POSTs to a login path from one IP is password guessing;
+# a POST followed by a 302 is a successful login (check the IP is yours).
+section_logins() {
+    local tsv=$1 logins="$WORKDIR/logins.tsv"
+    awk -F'\t' '$3 == "POST" && tolower($4) ~ /login|wp-login|signin|auth/' "$tsv" > "$logins"
+    section_header "Login POSTs (password guessing / successful sign-ins)"
+    printf '  %-16s %s\n' "Login POSTs:" "$(wc -l < "$logins" | tr -d ' ')"
+    if [[ -s $logins ]]; then
+        echo "  By IP, with outcome (302 = accepted, 419/422/401 = rejected):"
+        awk -F'\t' '{ printf "%s %s\n", $1, $5 }' "$logins" | sort | uniq -c | sort -rn \
+            | head -n "$TOPN" | awk '{ printf "  %8d  %s  -> %s\n", $1, $2, $3 }'
+    fi
 }
 
 section_user_agents() {
@@ -302,6 +322,7 @@ analyze_file() {
     section_top_ips     "$tsv"
     section_404s        "$tsv"
     section_probes      "$tsv"
+    section_logins      "$tsv"
     section_user_agents "$tsv"
     [[ $site == minigolf ]] && section_conversions "$tsv"
     return 0
