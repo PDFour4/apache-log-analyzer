@@ -1,0 +1,8 @@
+# Real server logs contain visitor IPs; never commit them.
+test-data/
+# Generated reports and demo captures
+reports/
+*.log
+*.log.[0-9]*
+*.gz
+lab6-demo.txt
