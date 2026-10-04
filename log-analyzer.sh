@@ -236,7 +236,8 @@ section_probes() {
     # The one line that matters: a probe that got a 2xx means the thing
     # being probed for actually exists and was served.  Should always be none.
     echo "  !! Probes that SUCCEEDED (2xx):"
-    awk -F'\t' '$5 ~ /^2/' "$probes" > "$WORKDIR/probes-ok.tsv"
+    # (path matches only: a scanner UA fetching "/" is not a finding)
+    awk -F'\t' '$5 ~ /^2/ && tolower($4) ~ ENVIRON["PROBE_PATHS"]' "$probes" > "$WORKDIR/probes-ok.tsv"
     top_n "$WORKDIR/probes-ok.tsv" 4 "$TOPN" | print_counts | sed 's/^/  /'
 }
 
