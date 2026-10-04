@@ -333,17 +333,32 @@ build_report() {
 
 # --- Mail -------------------------------------------------------------------
 # The server has no MTA, so talk SMTP to Gmail directly with curl.  The
-# credentials file (chmod 600) defines MAIL_FROM, MAIL_TO, MAIL_APP_PASSWORD.
+# credentials file (chmod 600) defines MAIL_FROM, MAIL_APP_PASSWORD and
+# optionally MAIL_TO (defaults to MAIL_FROM).
 send_mail() {
     local report=$1 msg="$WORKDIR/message.eml" subject
     [[ -r $MAIL_ENV ]] || die "mail: $MAIL_ENV not found or unreadable"
     local perms
     perms=$(stat -c '%a' "$MAIL_ENV" 2>/dev/null || stat -f '%Lp' "$MAIL_ENV")
     [[ $perms == 600 ]] || echo "warning: $MAIL_ENV should be chmod 600 (is $perms)" >&2
-    # shellcheck source=/dev/null
-    source "$MAIL_ENV"
-    : "${MAIL_FROM:?missing in $MAIL_ENV}" "${MAIL_TO:?missing in $MAIL_ENV}" \
-      "${MAIL_APP_PASSWORD:?missing in $MAIL_ENV}"
+    # Read KEY=VALUE lines ourselves instead of sourcing the file, so a value
+    # with spaces (Google shows app passwords as "xxxx xxxx xxxx xxxx") or odd
+    # characters can never be executed as shell.
+    local key val
+    while IFS='=' read -r key val || [[ -n $key ]]; do
+        key=${key//[[:space:]]/}
+        [[ -z $key || $key == \#* ]] && continue
+        val=${val%\"}; val=${val#\"}; val=${val%\'}; val=${val#\'}
+        case $key in
+            MAIL_FROM)         MAIL_FROM=${val//[[:space:]]/} ;;
+            MAIL_TO)           MAIL_TO=${val//[[:space:]]/} ;;
+            MAIL_APP_PASSWORD) MAIL_APP_PASSWORD=${val//[[:space:]]/} ;;
+            MAIL_SMTP)         MAIL_SMTP=${val//[[:space:]]/} ;;
+        esac
+    done < "$MAIL_ENV"
+    [[ -n ${MAIL_FROM:-} ]]         || die "mail: MAIL_FROM missing in $MAIL_ENV"
+    [[ -n ${MAIL_APP_PASSWORD:-} ]] || die "mail: MAIL_APP_PASSWORD missing in $MAIL_ENV"
+    MAIL_TO=${MAIL_TO:-$MAIL_FROM}          # default: send the report to yourself
 
     subject="Apache log report: ${LOGFILE:+$(basename "$LOGFILE")}${SITE} ($DAY, $(date +%Y-%m-%d))"
     {
