@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # log-analyzer.sh
 # Name:    Raul Melendez
-# Userid:  rmelendez
+# Userid:  janayame
 # Purpose: Summarize an Apache combined-format access log (totals, status
 #          codes, top URLs/IPs, 404s, suspicious probes, user agents) and
 #          optionally email the report, for a daily cron job. 95-799 Lab 6.
