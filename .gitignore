@@ -6,3 +6,4 @@ reports/
 *.log.[0-9]*
 *.gz
 lab6-demo.txt
+doc/
