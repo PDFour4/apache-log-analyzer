@@ -7,3 +7,5 @@ reports/
 *.gz
 lab6-demo.txt
 doc/
+# private planning notes (server details)
+HANDOFF.md
