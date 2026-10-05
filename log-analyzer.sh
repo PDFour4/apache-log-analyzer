@@ -409,7 +409,7 @@ send_mail() {
     if curl --silent --show-error --ssl-reqd --url "${MAIL_SMTP:-smtps://smtp.gmail.com:465}" \
             --mail-from "$MAIL_FROM" --mail-rcpt "$MAIL_TO" \
             --user "$MAIL_FROM:$MAIL_APP_PASSWORD" --upload-file "$msg"; then
-        echo "mail: report sent to $MAIL_TO"
+        echo "$(date '+%F %T') mail: report sent to $MAIL_TO"
         # Keep a copy of exactly what was sent (headers included) under $HOME.
         local sent_dir="$HOME/log-analyzer/sent"
         mkdir -p "$sent_dir" && cp "$msg" "$sent_dir/report-$(date +%Y-%m-%d-%H%M).eml" \
