@@ -329,12 +329,28 @@ analyze_file() {
     return 0
 }
 
+# Printed at the top of every report so the daily habit is in the email itself.
+print_daily_read() {
+    cat <<'CHECK'
+
+-- The 30-second daily read --------------------------------------------
+  1. "Probes that SUCCEEDED" says none on every site.
+  2. "Login POSTs" is zero, or only your own IP prefix with a 302.
+  3. The status class table has no 5xx line.
+  4. Totals and top IPs look roughly like the day before.
+  If all four hold, the day was normal. Everything else in the report is
+  context for when one of them doesn't.
+------------------------------------------------------------------------
+CHECK
+}
+
 build_report() {
     local report=$1 targets=() s rc=0
     {
         printf 'Apache Log Report  (generated %s on %s)\n' \
             "$(date '+%Y-%m-%d %H:%M %Z')" "$(hostname)"
         printf 'Covering: %s\n' "$DAY"
+        print_daily_read
 
         if [[ -n $LOGFILE ]]; then
             analyze_file "$LOGFILE" "$(basename "$LOGFILE")" || rc=1
