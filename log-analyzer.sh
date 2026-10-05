@@ -410,6 +410,10 @@ send_mail() {
             --mail-from "$MAIL_FROM" --mail-rcpt "$MAIL_TO" \
             --user "$MAIL_FROM:$MAIL_APP_PASSWORD" --upload-file "$msg"; then
         echo "mail: report sent to $MAIL_TO"
+        # Keep a copy of exactly what was sent (headers included) under $HOME.
+        local sent_dir="$HOME/log-analyzer/sent"
+        mkdir -p "$sent_dir" && cp "$msg" "$sent_dir/report-$(date +%Y-%m-%d-%H%M).eml" \
+            && echo "mail: copy saved in $sent_dir"
     else
         die "mail: sending failed"
     fi
