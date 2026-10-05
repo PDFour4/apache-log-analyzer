@@ -329,6 +329,15 @@ analyze_file() {
     return 0
 }
 
+# Calendar date the report covers (GNU date on Linux, BSD date on macOS).
+covered_date() {
+    if [[ $DAY == yesterday ]]; then
+        date -d yesterday +%Y-%m-%d 2>/dev/null || date -v-1d +%Y-%m-%d
+    else
+        date +%Y-%m-%d
+    fi
+}
+
 # Printed at the top of every report so the daily habit is in the email itself.
 print_daily_read() {
     cat <<'CHECK'
@@ -349,7 +358,8 @@ build_report() {
     {
         printf 'Apache Log Report  (generated %s on %s)\n' \
             "$(date '+%Y-%m-%d %H:%M %Z')" "$(hostname)"
-        printf 'Covering: %s\n' "$DAY"
+        if [[ -n $LOGFILE ]]; then printf 'Covering: file %s\n' "$LOGFILE"
+        else printf 'Covering: %s (%s)\n' "$DAY" "$(covered_date)"; fi
         print_daily_read
 
         if [[ -n $LOGFILE ]]; then
@@ -398,7 +408,7 @@ send_mail() {
     [[ -n ${MAIL_APP_PASSWORD:-} ]] || die "mail: MAIL_APP_PASSWORD missing in $MAIL_ENV"
     MAIL_TO=${MAIL_TO:-$MAIL_FROM}          # default: send the report to yourself
 
-    subject="Apache log report: ${LOGFILE:+$(basename "$LOGFILE")}${SITE} ($DAY, $(date +%Y-%m-%d))"
+    subject="Apache log report: ${LOGFILE:+$(basename "$LOGFILE")}${SITE} ($DAY, $(covered_date))"
     {
         printf 'From: %s\nTo: %s\nSubject: %s\nDate: %s\n' \
             "$MAIL_FROM" "$MAIL_TO" "$subject" "$(date -R 2>/dev/null || date '+%a, %d %b %Y %T %z')"
@@ -423,14 +433,11 @@ send_mail() {
 prompt_user() {
     local ans
     echo "No options given; answer a few questions (Enter accepts the default)."
-    read -r -p "Site [minigolf/portal/portfolio/all] (all): " ans
-    SITE=${ans:-all}
-    read -r -p "Day [today/yesterday] (today): " ans
-    DAY=${ans:-today}
-    read -r -p "How many entries per table? (10): " ans
-    TOPN=${ans:-10}
-    read -r -p "Mask IP addresses? [y/N]: " ans
-    [[ $ans =~ ^[Yy] ]] && ANONYMIZE=1
+    ask() { printf '%s' "$1" >&2; read -r ans || ans=""; [[ -t 0 ]] || echo "$ans" >&2; }
+    ask "Site [minigolf/portal/portfolio/all] (all): ";  SITE=${ans:-all}
+    ask "Day [today/yesterday] (today): ";               DAY=${ans:-today}
+    ask "How many entries per table? (10): ";            TOPN=${ans:-10}
+    ask "Mask IP addresses? [y/N]: ";                    [[ $ans =~ ^[Yy] ]] && ANONYMIZE=1
 }
 
 # --- Argument handling ------------------------------------------------------
