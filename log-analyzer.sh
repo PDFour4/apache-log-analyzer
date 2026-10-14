@@ -241,6 +241,20 @@ section_probes() {
     top_n "$WORKDIR/probes-ok.tsv" 4 "$TOPN" | print_counts | sed 's/^/  /'
 }
 
+# Server errors: a 5xx means the server itself failed, so name the requests.
+section_5xx() {
+    local tsv=$1 errs="$WORKDIR/5xx.tsv"
+    awk -F'\t' '$5 ~ /^5/' "$tsv" > "$errs"
+    [[ -s $errs ]] || return 0
+    section_header "Server errors (5xx) - what triggered them"
+    printf '  %-16s %s\n' "5xx responses:" "$(wc -l < "$errs" | tr -d ' ')"
+    echo "  By status and path:"
+    awk -F'\t' '{ printf "%s %s\n", $5, $4 }' "$errs" | sort | uniq -c | sort -rn \
+        | head -n "$TOPN" | awk '{ printf "  %8d  %s  %s\n", $1, $2, $3 }'
+    echo "  By IP:"
+    top_n "$errs" 1 "$TOPN" | print_counts | sed 's/^/  /'
+}
+
 # Login attempts: many POSTs to a login path from one IP is password guessing;
 # a POST followed by a 302 is a successful login (check the IP is yours).
 section_logins() {
@@ -319,6 +333,7 @@ analyze_file() {
 
     section_totals      "$tsv"
     section_status      "$tsv"
+    section_5xx         "$tsv"
     section_top_urls    "$tsv"
     section_top_ips     "$tsv"
     section_404s        "$tsv"
@@ -345,7 +360,7 @@ print_daily_read() {
 -- The 30-second daily read --------------------------------------------
   1. "Probes that SUCCEEDED" says none on every site.
   2. "Login POSTs" is zero, or only your own IP prefix with a 302.
-  3. The status class table has no 5xx line.
+  3. The status class table has no 5xx line (if it does, see "Server errors").
   4. Totals and top IPs look roughly like the day before.
   If all four hold, the day was normal. Everything else in the report is
   context for when one of them doesn't.
