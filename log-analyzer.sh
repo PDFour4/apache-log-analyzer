@@ -280,9 +280,12 @@ section_user_agents() {
 section_conversions() {
     local tsv=$1
     section_header "Mini golf conversions (tracking pixels)"
+    # Only count real browsers: curl/wget/scripted fetches (including my own
+    # site checks, which use -A ops-check) are tests or bots, not customers.
     for pixel in call quote; do
         awk -F'\t' -v p="/track/$pixel.gif" -v name="$pixel" '
-            index($4, p) == 1 { hits++; ip[$1] = 1 }
+            index($4, p) == 1 && $5 ~ /^2/ && $7 ~ /^Mozilla/ \
+                && $7 !~ /ops-check|curl|wget|python|Go-http|bot|spider|crawl/ { hits++; ip[$1] = 1 }
             END { n = 0; for (k in ip) n++
                   printf "  %-7s taps: %4d   unique visitors: %4d\n", name, hits + 0, n }
         ' "$tsv"
